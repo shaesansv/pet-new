@@ -1,0 +1,183 @@
+Build a complete full-stack Pet Shop project with frontend (React + TypeScript) and backend (Express.js + MongoDB). Deliver clean, production-ready code with every file separated into developer-friendly folders. Follow these exact functional and technical requirements.
+
+GENERAL
+- Project name: PetShopForest
+- Tech stack:
+  - Frontend: Vite + React + TypeScript, React Router, React Context for shared state, TailwindCSS (or CSS modules) for styling and animations.
+  - Backend: Node.js + Express.js, MongoDB using Mongoose ODM.
+  - Realtime updates: Socket.IO so admin changes immediately reflect on user site.
+  - File uploads: multer (store uploaded images under /uploads and serve statically).
+  - Authentication: JWT-based admin login.
+  - Environment config: use a .env file with examples (.env.example).
+- Provide README with setup + run instructions (dev and production), example env values, and seed script to create an admin user and sample categories/products.
+
+BACKEND — EXPRESS + MONGODB (must include)
+- Folder structure (example):
+  - /server
+    - /src
+      - index.ts (or server.ts)
+      - app.ts (express setup, middleware)
+      - /config/db.ts (mongoose connection, export connectDB())
+      - /routes
+        - auth.routes.ts
+        - admin.routes.ts
+        - products.routes.ts
+        - orders.routes.ts
+        - public.routes.ts
+      - /controllers
+        - auth.controller.ts
+        - admin.controller.ts
+        - products.controller.ts
+        - orders.controller.ts
+      - /models
+        - Admin.model.ts
+        - Category.model.ts
+        - Product.model.ts
+        - Order.model.ts
+      - /middleware
+        - auth.middleware.ts (verify JWT)
+        - error.middleware.ts
+        - upload.middleware.ts (multer config)
+      - /utils
+        - validators.ts (request body validation)
+        - socket.ts (socket.io helpers)
+      - /seed
+        - seed.ts (script to populate sample categories/products and admin user)
+    - /uploads (static served folder)
+    - package.json, tsconfig.json (if TS), .env.example
+
+- DB & models:
+  - Admin: { name, email, passwordHash, role }
+  - Category: { name, slug, description, createdAt }
+  - Product: {
+      name,
+      category: ObjectId ref Category,
+      type: enum ["pet","food","accessory"],
+      species?: string (e.g., "dog", "cat", "fish") for pet items,
+      images: [string] (paths to /uploads),
+      description,
+      priceInINR: number,
+      stock: number,
+      available: boolean,
+      createdAt
+    }
+  - Order: {
+      products: [{ productId, name, priceInINR, quantity }],
+      customer: { name, phone, altPhone?, address },
+      totalAmountINR,
+      status: enum ["pending","completed","cancelled"],
+      createdAt
+    }
+
+- API endpoints (REST):
+  - POST /api/auth/login — admin login (email + password) → returns { token, admin }
+  - GET /api/public/youtube — retrieve current youtube URL stored by admin
+  - PUT /api/admin/site — (protected) update shop description and youtube URL
+  - CRUD for categories (protected):
+    - POST /api/admin/categories
+    - GET /api/categories (public)
+    - GET /api/categories/:id
+    - PUT /api/admin/categories/:id
+    - DELETE /api/admin/categories/:id
+  - CRUD for products (protected):
+    - POST /api/admin/products (multipart/form-data — images + JSON)
+    - GET /api/products (public, with filters: category, type, species)
+    - GET /api/products/:id
+    - PUT /api/admin/products/:id (allow image replace)
+    - DELETE /api/admin/products/:id
+  - Orders:
+    - POST /api/orders (public) — place order (product id, qty, customer info) → create order and reduce stock atomically.
+    - GET /api/admin/orders (protected) — list orders
+    - GET /api/admin/orders/:id (protected)
+    - PUT /api/admin/orders/:id/status (protected)
+  - Websockets:
+    - Emit events when categories/products/orders are created/updated/deleted so the frontend updates live.
+
+- Security & validation:
+  - Hash admin passwords (bcrypt).
+  - Use express-validator or custom validation for request bodies.
+  - Protect admin routes with JWT middleware, token expiry, and role check.
+  - Sanitize inputs and limit upload file types/sizes.
+  - CORS middleware configured for frontend origin.
+
+- Devops / scripts:
+  - npm scripts for start, dev (nodemon / ts-node-dev), build, seed.
+  - Provide Dockerfile and docker-compose.yml (optional) connecting server + mongo.
+
+FRONTEND — REACT + TYPESCRIPT (must include)
+- Folder structure:
+  - /client
+    - /src
+      - main.tsx, App.tsx
+      - /pages
+        - /admin
+          - Login.tsx
+          - AdminLayout.tsx (side nav: Home, Orders)
+          - AdminHome.tsx (edit description + youtube url form)
+          - AdminOrders.tsx (list + order detail view)
+        - /user
+          - Home.tsx (shop description, embedded YouTube video)
+          - Orders.tsx (categories listing → product list → product detail modal)
+          - Contact.tsx (map, owner info)
+      - /components (reusable)
+        - ProductCard.tsx
+        - CategoryList.tsx
+        - CheckoutModal.tsx (collect name, phone, alt phone, address)
+        - SurpriseAnimation.tsx (played on successful purchase)
+        - ForestAnimation.tsx (background canvas/animated SVG for animals/snakes)
+      - /context
+        - AppContext.tsx (shared state — categories/products/youtubeUrl; uses socket.io for live updates)
+      - /api
+        - api.ts (axios instance), auth.api.ts, products.api.ts, orders.api.ts, admin.api.ts
+      - /styles (Tailwind + custom classes)
+      - /hooks (useAuth, useSocket)
+    - package.json, vite.config.ts, tailwind.config.js
+
+- UX & features:
+  - Admin:
+    - Login page with JWT stored in secure HttpOnly cookie or localStorage (document the choice).
+    - Admin Home: WYSIWYG textarea to edit shop description and a single input for YouTube URL (validate URL).
+    - Admin Orders: view orders and change status.
+    - Admin CRUD pages for categories and products (image uploader, preview).
+    - Any change triggers a socket event to update clients.
+  - User:
+    - Theme: “dark forest” — deep green backgrounds, subtle fog/gradient overlays, readable text in light color.
+    - Forest animations: include a `ForestAnimation` component using Canvas or SVG + CSS animations — moving leaves, small animal/snake silhouettes subtly moving across the scene (non-distracting).
+    - Home: show detailed description (from backend), embed YouTube video (from admin URL) in responsive player.
+    - Orders page: navigation by category; each product shows image, description, price (in INR), and quantity available. Add quantity selector. Clicking Buy opens Checkout modal collecting name, phone, alt phone, address.
+    - After successful purchase: show a friendly “Purchase Complete” message and play a short “surprised” animation (use Lottie or CSS animation).
+    - Contact page: embed Google Maps iframe (static example), show address, owner name, phone, email (fetched from backend/public route).
+  - Responsiveness & accessibility: mobile-friendly, keyboard accessible forms, aria attributes.
+
+DATA FLOW & REALTIME
+- Frontend pulls initial state (categories, products, youtubeUrl) from public API on load.
+- Open a socket.io connection; listen for events: category:created/updated/deleted, product:..., order:...
+- On receiving events, context updates and UI re-renders.
+- Orders placed invoke POST /api/orders; server validates stock, deducts stock, persists order, emits order created event to admin channel.
+
+DELIVERABLES
+- Full server code in /server with TypeScript (or JS with clear types).
+- Full client code in /client with TypeScript.
+- Example .env.example with:
+  - MONGODB_URI=
+  - JWT_SECRET=
+  - PORT=
+  - CLIENT_URL=
+- README describing:
+  - How to install, run, and seed the DB.
+  - API spec with example requests & payloads.
+  - How to build for production and run with docker-compose.
+- Seed script that creates:
+  - One admin user (email + password) and a few sample categories/products covering dogs, cats, fishes, foods, and accessories.
+- Optional: unit or integration tests for critical endpoints (auth, create product, place order).
+
+NON-FUNCTIONAL REQUIREMENTS
+- Keep code modular, well-documented, and formatted (prettier + eslint recommended).
+- Use environment variables for secrets and DB connection.
+- Do not use any external paid services.
+- Assume user will host backend at http://localhost:5000 and frontend at http://localhost:3000 during development.
+
+IMPORTANT: If anything is unclear while generating code, make reasonable defaults (e.g., use MongoDB + Mongoose, store images on server disk under /uploads, use JWT auth). If the user explicitly asks later, adapt to a different DB (Postgres) or image storage (S3).
+
+Produce the complete project code now: backend (Express + MongoDB) and frontend (Vite + React + TypeScript), ready to run locally. Include README and seed script.
+
