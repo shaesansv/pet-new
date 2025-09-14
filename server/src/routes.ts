@@ -10,8 +10,7 @@ import {
   insertProductSchema,
   insertOrderSchema,
   updateSiteSettingsSchema,
-} from "@shared/schema.js";
-import { Product } from "@shared/schema.js";
+} from "../../shared/schema.js";
 
 // Configure multer for file uploads
 const upload = multer({
