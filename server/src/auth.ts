@@ -4,8 +4,8 @@ import { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { storage } from "./storage.js";
+import { User as SelectUser } from "@shared/schema.js";
 
 declare global {
   namespace Express {
@@ -57,7 +57,12 @@ export function setupAuth(app: Express) {
     // Try to find user first, then admin
     let user = await storage.getUser(id);
     if (!user) {
-      user = await storage.getAdmin(id);
+      type User = {
+        id: string;
+        username: string;
+        password: string;
+        // other shared fields
+      };
     }
     done(null, user);
   });
@@ -92,9 +97,17 @@ export function setupAuth(app: Express) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    req.login(admin, (err) => {
+    // Normalize admin to match Express.User
+    const adminUser: SelectUser = {
+      id: admin.id,
+      username: admin.email,
+      password: admin.password, // or map from another field
+      // include any other required fields from SelectUser
+    };
+
+    req.login(adminUser, (err) => {
       if (err) return next(err);
-      res.status(200).json(admin);
+      res.status(200).json(adminUser);
     });
   });
 

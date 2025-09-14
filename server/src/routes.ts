@@ -3,9 +3,15 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
 import path from "path";
-import { storage } from "./storage";
-import { setupAuth } from "./auth";
-import { insertCategorySchema, insertProductSchema, insertOrderSchema, updateSiteSettingsSchema } from "@shared/schema";
+import { storage } from "./storage.js";
+import { setupAuth } from "./auth.js";
+import {
+  insertCategorySchema,
+  insertProductSchema,
+  insertOrderSchema,
+  updateSiteSettingsSchema,
+} from "@shared/schema.js";
+import { Product } from "@shared/schema.js";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -14,8 +20,11 @@ const upload = multer({
       cb(null, path.join(process.cwd(), "server", "uploads"));
     },
     filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(
+        null,
+        file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+      );
     },
   }),
   fileFilter: (req, file, cb) => {
@@ -35,7 +44,7 @@ let wsClients: Set<WebSocket> = new Set();
 
 function broadcastUpdate(event: string, data: any) {
   const message = JSON.stringify({ event, data });
-  wsClients.forEach(client => {
+  wsClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
@@ -53,12 +62,15 @@ function requireAdmin(req: any, res: any, next: any) {
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes
   setupAuth(app);
-  
+
   // Serve uploaded files statically
-  app.use("/uploads", express.static(path.join(process.cwd(), "server", "uploads")));
+  app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "server", "uploads"))
+  );
 
   // Public routes
-  
+
   // Get site settings (public)
   app.get("/api/public/settings", async (req, res) => {
     try {
@@ -124,59 +136,73 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/orders", async (req, res) => {
     try {
       const validatedData = insertOrderSchema.parse(req.body);
-      
+
       // Get products and validate stock
-      const productIds = validatedData.products.map(p => p.productId);
-      const products = await Promise.all(productIds.map(id => storage.getProduct(id)));
-      
-      if (products.some(p => !p)) {
-        return res.status(400).json({ message: "One or more products not found" });
+      const productIds = validatedData.products.map((p) => p.productId);
+      const products = await Promise.all(
+        productIds.map((id: string) => storage.getProduct(id))
+      );
+
+      if (products.some((p) => !p)) {
+        return res
+          .status(400)
+          .json({ message: "One or more products not found" });
       }
-      
+
       // Check stock availability
       for (const orderProduct of validatedData.products) {
-        const product = products.find(p => p?.id === orderProduct.productId);
+        const product = products.find((p) => p?.id === orderProduct.productId);
         if (!product || product.stock < orderProduct.quantity) {
-          return res.status(400).json({ 
-            message: `Insufficient stock for product: ${product?.name}` 
+          return res.status(400).json({
+            message: `Insufficient stock for product: ${product?.name}`,
           });
         }
       }
-      
+
       // Create order
-      const order = await storage.createOrder(validatedData, products.filter(Boolean) as any[]);
-      
+      const order = await storage.createOrder(
+        validatedData,
+        products.filter(Boolean) as any[]
+      );
+
       // Update product stock atomically
       for (const orderProduct of validatedData.products) {
-        const product = products.find(p => p?.id === orderProduct.productId);
+        const product = products.find((p) => p?.id === orderProduct.productId);
         if (product) {
-          await storage.updateProductStock(product.id, product.stock - orderProduct.quantity);
+          await storage.updateProductStock(
+            product.id,
+            product.stock - orderProduct.quantity
+          );
         }
       }
-      
+
       // Broadcast order created event
       broadcastUpdate("order:created", order);
-      
+
       res.status(201).json(order);
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to create order" });
+      res
+        .status(400)
+        .json({ message: error.message || "Failed to create order" });
     }
   });
 
   // Admin protected routes
-  
+
   // Update site settings
   app.put("/api/admin/site", requireAdmin, async (req, res) => {
     try {
       const validatedData = updateSiteSettingsSchema.parse(req.body);
       const settings = await storage.updateSiteSettings(validatedData);
-      
+
       // Broadcast settings updated event
       broadcastUpdate("settings:updated", settings);
-      
+
       res.json(settings);
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to update site settings" });
+      res
+        .status(400)
+        .json({ message: error.message || "Failed to update site settings" });
     }
   });
 
@@ -185,29 +211,36 @@ export function registerRoutes(app: Express): Server {
     try {
       const validatedData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(validatedData);
-      
+
       broadcastUpdate("category:created", category);
-      
+
       res.status(201).json(category);
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to create category" });
+      res
+        .status(400)
+        .json({ message: error.message || "Failed to create category" });
     }
   });
 
   app.put("/api/admin/categories/:id", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertCategorySchema.parse(req.body);
-      const category = await storage.updateCategory(req.params.id, validatedData);
-      
+      const category = await storage.updateCategory(
+        req.params.id,
+        validatedData
+      );
+
       if (!category) {
         return res.status(404).json({ message: "Category not found" });
       }
-      
+
       broadcastUpdate("category:updated", category);
-      
+
       res.json(category);
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to update category" });
+      res
+        .status(400)
+        .json({ message: error.message || "Failed to update category" });
     }
   });
 
@@ -217,9 +250,9 @@ export function registerRoutes(app: Express): Server {
       if (!deleted) {
         return res.status(404).json({ message: "Category not found" });
       }
-      
+
       broadcastUpdate("category:deleted", { id: req.params.id });
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete category" });
@@ -227,53 +260,74 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Product management
-  app.post("/api/admin/products", requireAdmin, upload.array("images", 5), async (req, res) => {
-    try {
-      const productData = JSON.parse(req.body.productData || "{}");
-      const validatedData = insertProductSchema.parse(productData);
-      
-      const product = await storage.createProduct(validatedData);
-      
-      // Handle uploaded images
-      if (req.files && Array.isArray(req.files)) {
-        const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
-        await storage.updateProductImages(product.id, imagePaths);
-        product.images = imagePaths;
-      }
-      
-      broadcastUpdate("product:created", product);
-      
-      res.status(201).json(product);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to create product" });
-    }
-  });
+  app.post(
+    "/api/admin/products",
+    requireAdmin,
+    upload.array("images", 5),
+    async (req, res) => {
+      try {
+        const productData = JSON.parse(req.body.productData || "{}");
+        const validatedData = insertProductSchema.parse(productData);
 
-  app.put("/api/admin/products/:id", requireAdmin, upload.array("images", 5), async (req, res) => {
-    try {
-      const productData = JSON.parse(req.body.productData || "{}");
-      const validatedData = insertProductSchema.parse(productData);
-      
-      const product = await storage.updateProduct(req.params.id, validatedData);
-      
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
+        const product = await storage.createProduct(validatedData);
+
+        // Handle uploaded images
+        if (req.files && Array.isArray(req.files)) {
+          const imagePaths = req.files.map(
+            (file) => `/uploads/${file.filename}`
+          );
+          await storage.updateProductImages(product.id, imagePaths);
+          product.images = imagePaths;
+        }
+
+        broadcastUpdate("product:created", product);
+
+        res.status(201).json(product);
+      } catch (error: any) {
+        res
+          .status(400)
+          .json({ message: error.message || "Failed to create product" });
       }
-      
-      // Handle uploaded images if provided
-      if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
-        await storage.updateProductImages(product.id, imagePaths);
-        product.images = imagePaths;
-      }
-      
-      broadcastUpdate("product:updated", product);
-      
-      res.json(product);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to update product" });
     }
-  });
+  );
+
+  app.put(
+    "/api/admin/products/:id",
+    requireAdmin,
+    upload.array("images", 5),
+    async (req, res) => {
+      try {
+        const productData = JSON.parse(req.body.productData || "{}");
+        const validatedData = insertProductSchema.parse(productData);
+
+        const product = await storage.updateProduct(
+          req.params.id,
+          validatedData
+        );
+
+        if (!product) {
+          return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Handle uploaded images if provided
+        if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+          const imagePaths = req.files.map(
+            (file) => `/uploads/${file.filename}`
+          );
+          await storage.updateProductImages(product.id, imagePaths);
+          product.images = imagePaths;
+        }
+
+        broadcastUpdate("product:updated", product);
+
+        res.json(product);
+      } catch (error: any) {
+        res
+          .status(400)
+          .json({ message: error.message || "Failed to update product" });
+      }
+    }
+  );
 
   app.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
     try {
@@ -281,9 +335,9 @@ export function registerRoutes(app: Express): Server {
       if (!deleted) {
         return res.status(404).json({ message: "Product not found" });
       }
-      
+
       broadcastUpdate("product:deleted", { id: req.params.id });
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete product" });
@@ -318,14 +372,14 @@ export function registerRoutes(app: Express): Server {
       if (!["pending", "completed", "cancelled"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
-      
+
       const order = await storage.updateOrderStatus(req.params.id, status);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
-      
+
       broadcastUpdate("order:updated", order);
-      
+
       res.json(order);
     } catch (error) {
       res.status(500).json({ message: "Failed to update order status" });
@@ -337,14 +391,14 @@ export function registerRoutes(app: Express): Server {
 
   // Setup WebSocket server
   const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
-  
+
   wss.on("connection", (ws) => {
     wsClients.add(ws);
-    
+
     ws.on("close", () => {
       wsClients.delete(ws);
     });
-    
+
     ws.on("error", (error) => {
       console.error("WebSocket error:", error);
       wsClients.delete(ws);

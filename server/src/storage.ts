@@ -1,4 +1,17 @@
-import { type Admin, type InsertAdmin, type Category, type InsertCategory, type Product, type InsertProduct, type Order, type InsertOrder, type SiteSettings, type UpdateSiteSettings, type User, type InsertUser } from "@shared/schema";
+import {
+  type Admin,
+  type InsertAdmin,
+  type Category,
+  type InsertCategory,
+  type Product,
+  type InsertProduct,
+  type Order,
+  type InsertOrder,
+  type SiteSettings,
+  type UpdateSiteSettings,
+  type User,
+  type InsertUser,
+} from "@shared/schema.js";
 import { randomUUID } from "crypto";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -10,38 +23,57 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Admin methods
   getAdmin(id: string): Promise<Admin | undefined>;
   getAdminByEmail(email: string): Promise<Admin | undefined>;
   createAdmin(admin: InsertAdmin): Promise<Admin>;
-  
+
   // Category methods
   getCategories(): Promise<Category[]>;
   getCategory(id: string): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
-  updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category | undefined>;
+  updateCategory(
+    id: string,
+    category: Partial<InsertCategory>
+  ): Promise<Category | undefined>;
   deleteCategory(id: string): Promise<boolean>;
-  
+
   // Product methods
-  getProducts(filters?: { categoryId?: string; type?: string; species?: string }): Promise<Product[]>;
+  getProducts(filters?: {
+    categoryId?: string;
+    type?: string;
+    species?: string;
+  }): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
-  updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
+  updateProduct(
+    id: string,
+    product: Partial<InsertProduct>
+  ): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<boolean>;
-  updateProductImages(id: string, images: string[]): Promise<Product | undefined>;
-  updateProductStock(id: string, newStock: number): Promise<Product | undefined>;
-  
+  updateProductImages(
+    id: string,
+    images: string[]
+  ): Promise<Product | undefined>;
+  updateProductStock(
+    id: string,
+    newStock: number
+  ): Promise<Product | undefined>;
+
   // Order methods
   getOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder, products: Product[]): Promise<Order>;
-  updateOrderStatus(id: string, status: "pending" | "completed" | "cancelled"): Promise<Order | undefined>;
-  
+  updateOrderStatus(
+    id: string,
+    status: "pending" | "completed" | "cancelled"
+  ): Promise<Order | undefined>;
+
   // Site settings methods
   getSiteSettings(): Promise<SiteSettings>;
   updateSiteSettings(settings: UpdateSiteSettings): Promise<SiteSettings>;
-  
+
   // Session store
   sessionStore: session.Store;
 }
@@ -61,23 +93,24 @@ export class MemStorage implements IStorage {
     this.categories = new Map();
     this.products = new Map();
     this.orders = new Map();
-    
+
     // Initialize default site settings
     this.siteSettings = {
       id: "default",
-      description: "Discover a magical world of pets, premium food, and accessories in our enchanted forest marketplace. Every creature deserves the finest care nature can provide.",
+      description:
+        "Discover a magical world of pets, premium food, and accessories in our enchanted forest marketplace. Every creature deserves the finest care nature can provide.",
       youtubeUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
       updatedAt: new Date(),
     };
-    
+
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     });
-    
+
     // Initialize default admin user
     this.initializeDefaultAdmin();
   }
-  
+
   private async initializeDefaultAdmin() {
     // Create default admin if not exists
     const defaultAdmin = await this.getAdminByEmail("admin@petshop.forest");
@@ -89,12 +122,12 @@ export class MemStorage implements IStorage {
       });
     }
   }
-  
+
   private async hashPassword(password: string): Promise<string> {
     const { scrypt, randomBytes, timingSafeEqual } = await import("crypto");
     const { promisify } = await import("util");
     const scryptAsync = promisify(scrypt);
-    
+
     const salt = randomBytes(16).toString("hex");
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
     return `${buf.toString("hex")}.${salt}`;
@@ -106,7 +139,9 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username
+    );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -122,7 +157,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAdminByEmail(email: string): Promise<Admin | undefined> {
-    return Array.from(this.admins.values()).find(admin => admin.email === email);
+    return Array.from(this.admins.values()).find(
+      (admin) => admin.email === email
+    );
   }
 
   async createAdmin(insertAdmin: InsertAdmin): Promise<Admin> {
@@ -139,7 +176,9 @@ export class MemStorage implements IStorage {
 
   // Category methods
   async getCategories(): Promise<Category[]> {
-    return Array.from(this.categories.values()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return Array.from(this.categories.values()).sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    );
   }
 
   async getCategory(id: string): Promise<Category | undefined> {
@@ -148,7 +187,10 @@ export class MemStorage implements IStorage {
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     const id = randomUUID();
-    const slug = insertCategory.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const slug = insertCategory.name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
     const category: Category = {
       ...insertCategory,
       id,
@@ -159,14 +201,22 @@ export class MemStorage implements IStorage {
     return category;
   }
 
-  async updateCategory(id: string, updateData: Partial<InsertCategory>): Promise<Category | undefined> {
+  async updateCategory(
+    id: string,
+    updateData: Partial<InsertCategory>
+  ): Promise<Category | undefined> {
     const category = this.categories.get(id);
     if (!category) return undefined;
-    
+
     const updatedCategory: Category = {
       ...category,
       ...updateData,
-      slug: updateData.name ? updateData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : category.slug,
+      slug: updateData.name
+        ? updateData.name
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "")
+        : category.slug,
     };
     this.categories.set(id, updatedCategory);
     return updatedCategory;
@@ -177,20 +227,26 @@ export class MemStorage implements IStorage {
   }
 
   // Product methods
-  async getProducts(filters?: { categoryId?: string; type?: string; species?: string }): Promise<Product[]> {
+  async getProducts(filters?: {
+    categoryId?: string;
+    type?: string;
+    species?: string;
+  }): Promise<Product[]> {
     let products = Array.from(this.products.values());
-    
+
     if (filters?.categoryId) {
-      products = products.filter(p => p.categoryId === filters.categoryId);
+      products = products.filter((p) => p.categoryId === filters.categoryId);
     }
     if (filters?.type) {
-      products = products.filter(p => p.type === filters.type);
+      products = products.filter((p) => p.type === filters.type);
     }
     if (filters?.species) {
-      products = products.filter(p => p.species === filters.species);
+      products = products.filter((p) => p.species === filters.species);
     }
-    
-    return products.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    return products.sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    );
   }
 
   async getProduct(id: string): Promise<Product | undefined> {
@@ -209,10 +265,13 @@ export class MemStorage implements IStorage {
     return product;
   }
 
-  async updateProduct(id: string, updateData: Partial<InsertProduct>): Promise<Product | undefined> {
+  async updateProduct(
+    id: string,
+    updateData: Partial<InsertProduct>
+  ): Promise<Product | undefined> {
     const product = this.products.get(id);
     if (!product) return undefined;
-    
+
     const updatedProduct: Product = {
       ...product,
       ...updateData,
@@ -225,19 +284,25 @@ export class MemStorage implements IStorage {
     return this.products.delete(id);
   }
 
-  async updateProductImages(id: string, images: string[]): Promise<Product | undefined> {
+  async updateProductImages(
+    id: string,
+    images: string[]
+  ): Promise<Product | undefined> {
     const product = this.products.get(id);
     if (!product) return undefined;
-    
+
     product.images = images;
     this.products.set(id, product);
     return product;
   }
 
-  async updateProductStock(id: string, newStock: number): Promise<Product | undefined> {
+  async updateProductStock(
+    id: string,
+    newStock: number
+  ): Promise<Product | undefined> {
     const product = this.products.get(id);
     if (!product) return undefined;
-    
+
     product.stock = newStock;
     this.products.set(id, product);
     return product;
@@ -245,21 +310,27 @@ export class MemStorage implements IStorage {
 
   // Order methods
   async getOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return Array.from(this.orders.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
     return this.orders.get(id);
   }
 
-  async createOrder(insertOrder: InsertOrder, products: Product[]): Promise<Order> {
+  async createOrder(
+    insertOrder: InsertOrder,
+    products: Product[]
+  ): Promise<Order> {
     const id = randomUUID();
-    
+
     // Calculate order details
-    const orderProducts = insertOrder.products.map(orderProduct => {
-      const product = products.find(p => p.id === orderProduct.productId);
-      if (!product) throw new Error(`Product ${orderProduct.productId} not found`);
-      
+    const orderProducts = insertOrder.products.map((orderProduct) => {
+      const product = products.find((p) => p.id === orderProduct.productId);
+      if (!product)
+        throw new Error(`Product ${orderProduct.productId} not found`);
+
       return {
         productId: orderProduct.productId,
         name: product.name,
@@ -267,11 +338,12 @@ export class MemStorage implements IStorage {
         quantity: orderProduct.quantity,
       };
     });
-    
-    const totalAmountINR = orderProducts.reduce((total, product) => 
-      total + (product.priceInINR * product.quantity), 0
+
+    const totalAmountINR = orderProducts.reduce(
+      (total, product) => total + product.priceInINR * product.quantity,
+      0
     );
-    
+
     const order: Order = {
       id,
       products: orderProducts,
@@ -280,15 +352,18 @@ export class MemStorage implements IStorage {
       status: "pending",
       createdAt: new Date(),
     };
-    
+
     this.orders.set(id, order);
     return order;
   }
 
-  async updateOrderStatus(id: string, status: "pending" | "completed" | "cancelled"): Promise<Order | undefined> {
+  async updateOrderStatus(
+    id: string,
+    status: "pending" | "completed" | "cancelled"
+  ): Promise<Order | undefined> {
     const order = this.orders.get(id);
     if (!order) return undefined;
-    
+
     order.status = status;
     this.orders.set(id, order);
     return order;
@@ -299,7 +374,9 @@ export class MemStorage implements IStorage {
     return this.siteSettings;
   }
 
-  async updateSiteSettings(settings: UpdateSiteSettings): Promise<SiteSettings> {
+  async updateSiteSettings(
+    settings: UpdateSiteSettings
+  ): Promise<SiteSettings> {
     this.siteSettings = {
       ...this.siteSettings,
       ...settings,
