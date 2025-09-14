@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Crimson+Text:wght@400;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(168, 65%, 6%);
+  --foreground: hsl(60, 9%, 98%);
+  --card: hsl(167, 47%, 11%);
+  --card-foreground: hsl(60, 9%, 98%);
+  --popover: hsl(167, 47%, 11%);
+  --popover-foreground: hsl(60, 9%, 98%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(60, 9%, 98%);
+  --secondary: hsl(167, 47%, 15%);
+  --secondary-foreground: hsl(60, 9%, 98%);
+  --muted: hsl(167, 47%, 15%);
+  --muted-foreground: hsl(60, 5%, 65%);
+  --accent: hsl(142, 69%, 58%);
+  --accent-foreground: hsl(167, 65%, 6%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(60, 9%, 98%);
+  --border: hsl(167, 47%, 20%);
+  --input: hsl(167, 47%, 15%);
+  --ring: hsl(142, 76%, 36%);
+  --chart-1: hsl(142, 76%, 36%);
+  --chart-2: hsl(159, 78%, 36%);
+  --chart-3: hsl(42, 93%, 56%);
+  --chart-4: hsl(147, 78%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar: hsl(167, 47%, 11%);
+  --sidebar-foreground: hsl(60, 9%, 98%);
+  --sidebar-primary: hsl(142, 76%, 36%);
+  --sidebar-primary-foreground: hsl(60, 9%, 98%);
+  --sidebar-accent: hsl(167, 47%, 15%);
+  --sidebar-accent-foreground: hsl(142, 69%, 58%);
+  --sidebar-border: hsl(167, 47%, 20%);
+  --sidebar-ring: hsl(142, 76%, 36%);
+  --forest-dark: hsl(168, 65%, 6%);
+  --forest-medium: hsl(167, 47%, 11%);
+  --forest-light: hsl(167, 47%, 20%);
+  --forest-accent: hsl(142, 76%, 36%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Crimson Text', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 12px;
+  --shadow-2xs: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 1px 2px -1px hsl(142, 76%, 36% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 1px 2px -1px hsl(142, 76%, 36% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 2px 4px -1px hsl(142, 76%, 36% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 4px 6px -1px hsl(142, 76%, 36% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00), 0px 8px 10px -1px hsl(142, 76%, 36% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(142, 76%, 36% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    background: linear-gradient(135deg, 
+      hsl(168, 65%, 6%) 0%, 
+      hsl(167, 55%, 8%) 50%, 
+      hsl(168, 65%, 6%) 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .forest-card {
+    background: linear-gradient(145deg, 
+      hsl(167, 47%, 11%) 0%, 
+      hsl(167, 47%, 13%) 100%);
+    border: 1px solid hsl(167, 47%, 20%);
+    backdrop-filter: blur(10px);
+  }
+
+  .leaf-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: hsl(142, 69%, 58%);
+    border-radius: 50% 0;
+    animation: leafFall 8s linear infinite;
+  }
+
+  .leaf-particle:nth-child(2) { 
+    left: 20%; 
+    animation-delay: -2s; 
+    animation-duration: 6s; 
+  }
+  
+  .leaf-particle:nth-child(3) { 
+    left: 40%; 
+    animation-delay: -4s; 
+    animation-duration: 10s; 
+  }
+  
+  .leaf-particle:nth-child(4) { 
+    left: 60%; 
+    animation-delay: -1s; 
+    animation-duration: 7s; 
+  }
+  
+  .leaf-particle:nth-child(5) { 
+    left: 80%; 
+    animation-delay: -3s; 
+    animation-duration: 9s; 
+  }
+}
+
+@layer utilities {
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+  }
+
+  @keyframes leafFall {
+    0% { transform: translateY(-100vh) translateX(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(100vh) translateX(50px) rotate(360deg); opacity: 0; }
+  }
+
+  @keyframes surprise {
+    0% { transform: scale(0.8) rotate(-5deg); opacity: 0; }
+    50% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-leaf-fall {
+    animation: leafFall 8s linear infinite;
+  }
+
+  .animate-surprise {
+    animation: surprise 0.8s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+}
