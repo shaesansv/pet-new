@@ -54,7 +54,11 @@ export function setupAuth(app: Express) {
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
-    const user = await storage.getUser(id);
+    // Try to find user first, then admin
+    let user = await storage.getUser(id);
+    if (!user) {
+      user = await storage.getAdmin(id);
+    }
     done(null, user);
   });
 
@@ -77,6 +81,21 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     res.status(200).json(req.user);
+  });
+
+  // Admin login route  
+  app.post("/api/admin/login", async (req, res, next) => {
+    const { email, password } = req.body;
+    
+    const admin = await storage.getAdminByEmail(email);
+    if (!admin || !(await comparePasswords(password, admin.password))) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    req.login(admin, (err) => {
+      if (err) return next(err);
+      res.status(200).json(admin);
+    });
   });
 
   app.post("/api/logout", (req, res, next) => {

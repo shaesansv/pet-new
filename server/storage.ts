@@ -73,6 +73,31 @@ export class MemStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     });
+    
+    // Initialize default admin user
+    this.initializeDefaultAdmin();
+  }
+  
+  private async initializeDefaultAdmin() {
+    // Create default admin if not exists
+    const defaultAdmin = await this.getAdminByEmail("admin@petshop.forest");
+    if (!defaultAdmin) {
+      await this.createAdmin({
+        email: "admin@petshop.forest",
+        password: await this.hashPassword("admin123"),
+        name: "Forest Admin",
+      });
+    }
+  }
+  
+  private async hashPassword(password: string): Promise<string> {
+    const { scrypt, randomBytes, timingSafeEqual } = await import("crypto");
+    const { promisify } = await import("util");
+    const scryptAsync = promisify(scrypt);
+    
+    const salt = randomBytes(16).toString("hex");
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
   }
 
   // User methods (for auth compatibility)
