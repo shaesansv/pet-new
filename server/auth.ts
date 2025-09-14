@@ -49,7 +49,7 @@ export function setupAuth(app: Express) {
       } else {
         return done(null, user);
       }
-    }),
+    })
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
@@ -83,10 +83,10 @@ export function setupAuth(app: Express) {
     res.status(200).json(req.user);
   });
 
-  // Admin login route  
+  // Admin login route
   app.post("/api/admin/login", async (req, res, next) => {
     const { email, password } = req.body;
-    
+
     const admin = await storage.getAdminByEmail(email);
     if (!admin || !(await comparePasswords(password, admin.password))) {
       return res.status(401).json({ error: "Invalid credentials" });
